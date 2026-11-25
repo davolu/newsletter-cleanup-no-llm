@@ -5,12 +5,13 @@ import { addUsage, costFromUsage, formatUsd } from "@/lib/cost";
 import { COMPARISON_MODEL, JEV_INPUT_USD_PER_MILLION } from "@/lib/pricing";
 import { DEFAULT_SETTINGS, type Settings } from "@/lib/settings";
 import { UNSUBSCRIBE_LABEL } from "@/lib/safety";
+import { storageBanner, type StorageKind } from "@/lib/storage-selection";
 import type { HistoryEntry, PendingItem, ResultItem } from "@/lib/types";
 
 type StatusPayload = {
   ready: boolean;
   missingEnv: string[];
-  storage?: "file" | "upstash";
+  storage?: StorageKind;
   settings: Settings;
   gmail: { connected: boolean; accountId: string | null; error?: string | null };
   pending: PendingItem[];
@@ -128,12 +129,7 @@ export function CleanupApp() {
             Missing environment values: {status.missingEnv.join(", ")}. Add them, then reload.
           </p>
         )}
-        {status.storage === "file" && (
-          <p className="banner">
-            State on this machine is in <code>.data/state.json</code>. A hosted deploy still needs Upstash. Netlify,
-            Vercel, and Railway do not keep that file.
-          </p>
-        )}
+        {status.storage && <p className="banner">{storageBanner(status.storage)}</p>}
         {notice && <p className="banner">{notice}</p>}
         {error && <p className="error">{error}</p>}
 

@@ -1,8 +1,49 @@
 import { Redis } from "@upstash/redis";
+import { createNetlifyBlobStore } from "./blob-store";
 import { createFileStore } from "./file-store";
+import { connectTcpRedis } from "./redis-tcp";
 import { DEFAULT_SETTINGS, sanitizeSettings, type Settings } from "./settings";
+import { readRestRedis, selectStorage, type StorageKind } from "./storage-selection";
 import { freshCursor, type Store } from "./store";
 import type { HistoryEntry, PendingItem, ResultItem, ScanCursor } from "./types";
+
+export type { StorageKind };
+
+export type RedisCommands = {
+  get(key: string): Promise<unknown>;
+  set(key: string, value: string, options?: { nx?: boolean; ex?: number }): Promise<string | null>;
+  sismember(key: string, member: string): Promise<number>;
+  sadd(key: string, member: string): Promise<unknown>;
+  del(key: string): Promise<unknown>;
+  lrange(key: string, start: number, stop: number): Promise<unknown[]>;
+  lpush(key: string, value: string): Promise<unknown>;
+  ltrim(key: string, start: number, stop: number): Promise<unknown>;
+};
+
+export function commandsFromUpstash(redis: Redis): RedisCommands {
+  return {
+    get: (key) => redis.get(key),
+    async set(key, value, options) {
+      if (options?.nx && options.ex) {
+        const result = await redis.set(key, value, { nx: true, ex: options.ex });
+        return result === "OK" ? "OK" : null;
+      }
+      await redis.set(key, value);
+      return "OK";
+    },
+    async sismember(key, member) {
+      return Number(await redis.sismember(key, member));
+    },
+    sadd: (key, member) => redis.sadd(key, member),
+    del: (key) => redis.del(key),
+    async lrange(key, start, stop) {
+      const rows = await redis.lrange(key, start, stop);
+      return Array.isArray(rows) ? rows : [];
+    },
+    lpush: (key, value) => redis.lpush(key, value),
+    ltrim: (key, start, stop) => redis.ltrim(key, start, stop),
+  };
+}
 
 const KEYS = {
   settings: "nlc:settings",
@@ -28,7 +69,7 @@ function parseJson<T>(value: unknown): T | null {
   return null;
 }
 
-export function createRedisStore(redis: Redis): Store {
+export function createRedisStore(redis: RedisCommands): Store {
   return {
     async getSettings() {
       const parsed = parseJson<unknown>(await redis.get(KEYS.settings));
@@ -93,36 +134,26 @@ export function createRedisStore(redis: Redis): Store {
   };
 }
 
-export type StorageKind = "upstash" | "file";
-
-/** Both Upstash variables select Redis. Neither selects the local file. One of the two is a broken config. */
-export function storageKind(env: NodeJS.ProcessEnv = process.env): StorageKind {
-  const url = env.UPSTASH_REDIS_REST_URL?.trim() ?? "";
-  const token = env.UPSTASH_REDIS_REST_TOKEN?.trim() ?? "";
-  if (url && token) return "upstash";
-  if (url || token) {
-    throw new Error(
-      "Set both UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN, or leave both unset to use the local file store.",
-    );
-  }
-  return "file";
-}
-
 let cached: Store | null = null;
+
+export function openStore(kind: StorageKind, env: NodeJS.ProcessEnv = process.env): Store {
+  if (kind === "netlify-blobs") return createNetlifyBlobStore();
+  if (kind === "upstash") {
+    const credentials = readRestRedis(env);
+    if (!credentials) throw new Error("Upstash REST credentials are missing.");
+    return createRedisStore(commandsFromUpstash(new Redis({ url: credentials.url, token: credentials.token })));
+  }
+  if (kind === "redis") {
+    const url = env.REDIS_URL?.trim();
+    if (!url) throw new Error("REDIS_URL is missing.");
+    return createRedisStore(connectTcpRedis(url));
+  }
+  return createFileStore();
+}
 
 export function getStore(): Store {
   if (cached) return cached;
-  const kind = storageKind();
-  if (kind === "upstash") {
-    cached = createRedisStore(
-      new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL!.trim(),
-        token: process.env.UPSTASH_REDIS_REST_TOKEN!.trim(),
-      }),
-    );
-  } else {
-    cached = createFileStore();
-  }
+  cached = openStore(selectStorage());
   return cached;
 }
 

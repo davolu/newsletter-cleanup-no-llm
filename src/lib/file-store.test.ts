@@ -3,7 +3,6 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createFileStore } from "./file-store";
-import { storageKind } from "./redis-store";
 import { freshCursor } from "./store";
 import type { HistoryEntry } from "./types";
 
@@ -128,20 +127,3 @@ describe("local file store", () => {
   });
 });
 
-describe("storage selection", () => {
-  it("uses the file store only when both Upstash variables are unset", () => {
-    expect(storageKind({} as NodeJS.ProcessEnv)).toBe("file");
-    expect(storageKind({ UPSTASH_REDIS_REST_URL: "  ", UPSTASH_REDIS_REST_TOKEN: "" } as NodeJS.ProcessEnv)).toBe(
-      "file",
-    );
-    expect(
-      storageKind({
-        UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
-        UPSTASH_REDIS_REST_TOKEN: "token",
-      } as NodeJS.ProcessEnv),
-    ).toBe("upstash");
-    expect(() => storageKind({ UPSTASH_REDIS_REST_URL: "https://example.upstash.io" } as NodeJS.ProcessEnv)).toThrow(
-      /both/i,
-    );
-  });
-});

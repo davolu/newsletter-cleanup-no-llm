@@ -15,6 +15,3 @@
 [template.environment]
   TYPESAFE_API_KEY = "TypeSafe API key. No free credits: add a small prepaid balance first."
   COMPOSIO_API_KEY = "Composio API key. Composio runs the Gmail OAuth connection."
-  UPSTASH_REDIS_REST_URL = "Upstash Redis REST URL. Required on Netlify; serverless disks do not keep local files."
-  UPSTASH_REDIS_REST_TOKEN = "Upstash Redis REST token. Required on Netlify, paired with the URL."
-  CRON_SECRET = "Optional here. Required on Vercel. Letters and numbers, 16+ characters."
