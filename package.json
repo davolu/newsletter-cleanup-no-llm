@@ -1,0 +1,43 @@
+{
+  "name": "newsletter-cleanup-no-llm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sort newsletter and promo mail with Gmail signals and Jev. No LLM agent. Mail is never deleted.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "scheduled": "tsx src/scheduled.ts"
+  },
+  "engines": {
+    "node": ">=22.22.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davolu/newsletter-cleanup-no-llm.git"
+  },
+  "keywords": [],
+  "author": "David Oluyale",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/davolu/newsletter-cleanup-no-llm/issues"
+  },
+  "homepage": "https://github.com/davolu/newsletter-cleanup-no-llm#readme",
+  "dependencies": {
+    "@composio/core": "^0.32.0",
+    "@typesafe-ai/sdk": "^0.7.0",
+    "@upstash/redis": "^1.41.1",
+    "next": "^15.5.29",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.10",
+    "@types/react": "^19.3.3",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "5.9",
+    "vitest": "^5.1.2"
+  }
+}

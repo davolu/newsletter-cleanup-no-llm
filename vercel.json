@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "schedules": {
+    "newsletter-cleanup": {
+      "schedule": "0 * * * *",
+      "path": "/api/scheduled",
+      "requestMethod": "POST",
+      "jitter": 15
+    }
+  }
+}
