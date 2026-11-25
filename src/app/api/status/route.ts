@@ -1,29 +1,17 @@
 import { gmailConnectionStatus, createGmailSession } from "@/lib/gmail";
 import { fail, json } from "@/lib/http";
 import { logError } from "@/lib/redact";
-import { missingEnv, getStore } from "@/lib/redis-store";
-import { DEFAULT_SETTINGS } from "@/lib/settings";
+import { missingEnv, getStore, storageKind } from "@/lib/redis-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const missing = missingEnv();
-  if (missing.includes("UPSTASH_REDIS_REST_URL") || missing.includes("UPSTASH_REDIS_REST_TOKEN")) {
-    return json({
-      ready: false,
-      missingEnv: missing,
-      settings: DEFAULT_SETTINGS,
-      gmail: { connected: false, accountId: null },
-      pending: [],
-      lastResults: [],
-      history: [],
-      cursor: { completed: false, pendingCount: 0 },
-    });
-  }
 
   try {
     const store = getStore();
+    const storage = storageKind();
     const [settings, pending, lastResults, history, cursor, lastScheduledAt] = await Promise.all([
       store.getSettings(),
       store.getPending(),
@@ -48,6 +36,7 @@ export async function GET() {
     return json({
       ready: missing.length === 0,
       missingEnv: missing,
+      storage,
       settings,
       gmail,
       pending,

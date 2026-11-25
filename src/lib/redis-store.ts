@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import { createFileStore } from "./file-store";
 import { DEFAULT_SETTINGS, sanitizeSettings, type Settings } from "./settings";
 import { freshCursor, type Store } from "./store";
 import type { HistoryEntry, PendingItem, ResultItem, ScanCursor } from "./types";
@@ -92,24 +93,39 @@ export function createRedisStore(redis: Redis): Store {
   };
 }
 
+export type StorageKind = "upstash" | "file";
+
+/** Both Upstash variables select Redis. Neither selects the local file. One of the two is a broken config. */
+export function storageKind(env: NodeJS.ProcessEnv = process.env): StorageKind {
+  const url = env.UPSTASH_REDIS_REST_URL?.trim() ?? "";
+  const token = env.UPSTASH_REDIS_REST_TOKEN?.trim() ?? "";
+  if (url && token) return "upstash";
+  if (url || token) {
+    throw new Error(
+      "Set both UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN, or leave both unset to use the local file store.",
+    );
+  }
+  return "file";
+}
+
 let cached: Store | null = null;
 
 export function getStore(): Store {
   if (cached) return cached;
-  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
-  if (!url || !token) {
-    throw new Error("UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required");
+  const kind = storageKind();
+  if (kind === "upstash") {
+    cached = createRedisStore(
+      new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL!.trim(),
+        token: process.env.UPSTASH_REDIS_REST_TOKEN!.trim(),
+      }),
+    );
+  } else {
+    cached = createFileStore();
   }
-  cached = createRedisStore(new Redis({ url, token }));
   return cached;
 }
 
 export function missingEnv(): string[] {
-  return [
-    "TYPESAFE_API_KEY",
-    "COMPOSIO_API_KEY",
-    "UPSTASH_REDIS_REST_URL",
-    "UPSTASH_REDIS_REST_TOKEN",
-  ].filter((name) => !process.env[name]?.trim());
+  return ["TYPESAFE_API_KEY", "COMPOSIO_API_KEY"].filter((name) => !process.env[name]?.trim());
 }

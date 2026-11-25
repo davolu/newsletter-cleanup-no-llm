@@ -33,12 +33,12 @@ Mail does leave the deployment: a sender, subject, and short snippet go to TypeS
 
 ## Beginner setup
 
-You need three accounts. None of the secret values belong in git. `.env.example` lists the names.
+A hosted deploy needs three accounts. Running it on your own computer needs the Composio key and the TypeSafe key. None of the secret values belong in git. `.env.example` lists the names.
 
 1. **Composio key.** Sign in at [composio.dev](https://composio.dev), open Platform, choose the project, then Settings → API Keys. Create a project API key. That value is `COMPOSIO_API_KEY`. Composio’s managed Google login is what connects Gmail, so you do not create a Google Cloud app for the usual case. If Google says the app is blocked, Composio’s managed Gmail app is not allowed for that account. Their [Gmail guide](https://docs.composio.dev/toolkits/gmail) explains using your own Google OAuth client instead.
 2. **TypeSafe key.** Create a key as described in the [TypeSafe quick start](https://docs.typesafe.ai/introduction/quickstart) and set `TYPESAFE_API_KEY`. TypeSafe does not include free credits. Open Settings → Billing in the TypeSafe console and add a small prepaid balance before the first run. A zero balance comes back as HTTP 402 and nothing gets classified. See [how Jev is priced](https://help.typesafe.ai/articles/5187202169-how-much-does-jev-cost).
-3. **Upstash Redis.** Create a database on the [Upstash console](https://console.upstash.com/). Open the REST API section and copy `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. The free database is enough for one mailbox. Check [Upstash pricing](https://upstash.com/pricing) for the current free-tier cap rather than trusting an old number.
-4. **Deploy** with one of the buttons below, and paste those values when the host asks. On Vercel, also set `CRON_SECRET` to a random string of letters and numbers, at least 16 characters.
+3. **Upstash Redis, for a hosted deploy.** Create a database on the [Upstash console](https://console.upstash.com/). Open the REST API section and copy `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. The free database is enough for one mailbox. Check [Upstash pricing](https://upstash.com/pricing) for the current free-tier cap rather than trusting an old number. Skip this step for `npm run dev`. When both variables are unset, the app writes `.data/state.json` on that machine instead.
+4. **Deploy** with one of the buttons below, and paste the keys when the host asks, including both Upstash values. On Vercel, also set `CRON_SECRET` to a random string of letters and numbers, at least 16 characters. Netlify, Vercel, and Railway do not keep a writable file between requests, so a hosted deploy still needs Upstash.
 5. Open the site, press **Connect Gmail**, and finish Google’s screen. Composio keeps the token.
 6. Leave **Suggest only** on for the first run. Press **Run now**. Read the list. Press **Apply selected** or **Apply all suggestions** when you agree.
 
@@ -60,7 +60,7 @@ Hourly is the platform timer. If you pick **Daily** in the app, the hourly funct
 
 ### Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdavolu%2Fnewsletter-cleanup-no-llm&project-name=newsletter-cleanup-no-llm&repository-name=newsletter-cleanup-no-llm&env=TYPESAFE_API_KEY,COMPOSIO_API_KEY,UPSTASH_REDIS_REST_URL,UPSTASH_REDIS_REST_TOKEN,CRON_SECRET&envDescription=TypeSafe%20API%20key%20%28add%20a%20prepaid%20balance%3B%20there%20are%20no%20free%20credits%29%2C%20Composio%20API%20key%2C%20Upstash%20Redis%20REST%20URL%20and%20token%2C%20and%20a%20random%20CRON_SECRET%20of%20letters%20and%20numbers%2C%2016%2B%20characters%2C%20so%20the%20hourly%20route%20is%20not%20public.&envLink=https%3A%2F%2Fgithub.com%2Fdavolu%2Fnewsletter-cleanup-no-llm%23environment-variables)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdavolu%2Fnewsletter-cleanup-no-llm&project-name=newsletter-cleanup-no-llm&repository-name=newsletter-cleanup-no-llm&env=TYPESAFE_API_KEY,COMPOSIO_API_KEY,UPSTASH_REDIS_REST_URL,UPSTASH_REDIS_REST_TOKEN,CRON_SECRET&envDescription=TypeSafe%20API%20key%20%28add%20a%20prepaid%20balance%3B%20there%20are%20no%20free%20credits%29%2C%20Composio%20API%20key%2C%20Upstash%20Redis%20REST%20URL%20and%20token%20%28required%20on%20this%20host%3B%20serverless%20disks%20do%20not%20keep%20files%29%2C%20and%20a%20random%20CRON_SECRET%20of%20letters%20and%20numbers%2C%2016%2B%20characters%2C%20so%20the%20hourly%20route%20is%20not%20public.&envLink=https%3A%2F%2Fgithub.com%2Fdavolu%2Fnewsletter-cleanup-no-llm%23environment-variables)
 
 `vercel.json` uses the Vercel **Schedules** `schedules` key. It does not use the legacy `crons` key. The schedule is `0 * * * *` (hourly) with `"jitter": 15`, aimed at `POST /api/scheduled`.
 
@@ -87,8 +87,8 @@ You can wire the same two services by hand: one service with start command `npm 
 | --- | --- | --- |
 | `TYPESAFE_API_KEY` | Yes | Jev classification. Prepaid balance required. |
 | `COMPOSIO_API_KEY` | Yes | Composio project key. Holds the Gmail connection. |
-| `UPSTASH_REDIS_REST_URL` | Yes | Upstash Redis REST URL. |
-| `UPSTASH_REDIS_REST_TOKEN` | Yes | Upstash Redis REST token. |
+| `UPSTASH_REDIS_REST_URL` | Hosted deploys | Upstash Redis REST URL. Leave unset, together with the token, for a local file. |
+| `UPSTASH_REDIS_REST_TOKEN` | Hosted deploys | Upstash Redis REST token. Set both Upstash variables, or neither. |
 | `CRON_SECRET` | Yes on Vercel | Shared secret for `POST /api/scheduled`. Letters and numbers, 16 or more characters. |
 | `TYPESAFE_MODEL` | No | Defaults to `jev-latest`. |
 | `APP_ORIGIN` | No | Public site origin if the host does not send forwarded host headers. Used as the Gmail return URL. |
@@ -107,7 +107,11 @@ TypeSafe bills this from the prepaid balance. Composio, Upstash, and the host ea
 
 ## Where state lives
 
-State is in **Upstash Redis**, reached over HTTPS with `@upstash/redis`. That works from Netlify, Vercel, and Railway without a private network. The keys hold:
+On your computer, when `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are both unset, state is a JSON file at `.data/state.json`. Git ignores that directory. The app chooses this by itself. You only need `TYPESAFE_API_KEY` and `COMPOSIO_API_KEY` in `.env.local`.
+
+A hosted deploy still needs Upstash. Netlify Functions, Vercel Functions, and Railway cron run on disks that do not keep files from one request to the next, and the Railway web service does not share a disk with the cron service. Without Redis, the cursor, settings, and history would disappear. Upstash is reached over HTTPS with `@upstash/redis`, and the free tier is enough for one mailbox.
+
+Either store holds:
 
 - settings (batch size, caps, schedule, always-keep senders)
 - the Gmail page cursor
@@ -122,7 +126,7 @@ Reset scan clears the cursor, the handled ids, and the pending suggestions. It d
 
 The schedule toggle starts **off**. Manual **Run now** is the normal way to use the app.
 
-Netlify, Vercel, and Railway still have a timer, because a host cannot turn its cron on and off from a checkbox in Redis. Each timer calls one entrypoint (`netlify/functions/scheduled-cleanup.mts`, `POST /api/scheduled`, or `npm run scheduled`). That entrypoint reads the toggle. When the toggle is off, it exits without calling Gmail or Jev. When the toggle is Daily, an hourly wake-up exits until 20 hours have passed since the last scheduled run.
+Netlify, Vercel, and Railway still have a timer, because a host cannot turn its cron on and off from a saved checkbox. Each timer calls one entrypoint (`netlify/functions/scheduled-cleanup.mts`, `POST /api/scheduled`, or `npm run scheduled`). That entrypoint reads the toggle. When the toggle is off, it exits without calling Gmail or Jev. When the toggle is Daily, an hourly wake-up exits until 20 hours have passed since the last scheduled run.
 
 ## Safety
 
@@ -142,7 +146,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Put the real keys in `.env.local`, which git ignores.
+Open [http://localhost:3000](http://localhost:3000). Put `TYPESAFE_API_KEY` and `COMPOSIO_API_KEY` in `.env.local`, which git ignores. Leave the Upstash lines empty. Settings and run history then stay in `.data/state.json`.
 
 ```bash
 npm test
@@ -153,7 +157,7 @@ npm run scheduled
 
 ## Tests
 
-`npm test` covers candidate detection (Promotions, `List-Unsubscribe`, bulk-sender headers, ordinary mail, the always-keep list), classification parsing (the three actions, a refusal of any other action, real token counts, and a mocked Jev call that only receives sender, subject, and a short snippet), and the cost math against the published prices. Jev is mocked in tests only.
+`npm test` covers candidate detection (Promotions, `List-Unsubscribe`, bulk-sender headers, ordinary mail, the always-keep list), classification parsing (the three actions, a refusal of any other action, real token counts, and a mocked Jev call that only receives sender, subject, and a short snippet), the cost math against the published prices, and the local file store. Jev is mocked in tests only.
 
 ## Credit
 

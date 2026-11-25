@@ -7,6 +7,7 @@ dist
 .env
 .env.local
 .env.*.local
+.data
 *.log
 coverage
 .DS_Store

@@ -10,6 +10,7 @@ import type { HistoryEntry, PendingItem, ResultItem } from "@/lib/types";
 type StatusPayload = {
   ready: boolean;
   missingEnv: string[];
+  storage?: "file" | "upstash";
   settings: Settings;
   gmail: { connected: boolean; accountId: string | null; error?: string | null };
   pending: PendingItem[];
@@ -124,7 +125,13 @@ export function CleanupApp() {
       <div className="grid">
         {status.missingEnv.length > 0 && (
           <p className="error">
-            Missing environment values: {status.missingEnv.join(", ")}. Add them on the host, then reload.
+            Missing environment values: {status.missingEnv.join(", ")}. Add them, then reload.
+          </p>
+        )}
+        {status.storage === "file" && (
+          <p className="banner">
+            State on this machine is in <code>.data/state.json</code>. A hosted deploy still needs Upstash. Netlify,
+            Vercel, and Railway do not keep that file.
           </p>
         )}
         {notice && <p className="banner">{notice}</p>}
