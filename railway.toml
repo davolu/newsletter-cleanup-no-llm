@@ -1,0 +1,12 @@
+# Web service. Railway reads this file for the service that should stay up.
+# The cron worker is railway.cron.toml — point a second service at that config
+# (or copy its start command and cron into the dashboard). The cron process
+# must exit. It does no work unless the in-app schedule is enabled.
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npm run start"
+healthcheckPath = "/"
+restartPolicyType = "ON_FAILURE"

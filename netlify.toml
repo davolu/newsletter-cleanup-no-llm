@@ -1,0 +1,20 @@
+# Next.js is built by Netlify's OpenNext adapter. Do not pin that adapter.
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Published production deploys only. The function exits immediately unless
+# the user has turned the in-app schedule on. @hourly is 0 * * * * UTC.
+# Scheduled functions on Netlify are capped at 30 seconds, so the default
+# in-app time budget is 20 seconds and the run saves a cursor if it nears it.
+[functions."scheduled-cleanup"]
+  schedule = "@hourly"
+
+[template.environment]
+  TYPESAFE_API_KEY = "TypeSafe API key. No free credits: add a small prepaid balance first."
+  COMPOSIO_API_KEY = "Composio API key. Composio runs the Gmail OAuth connection."
+  UPSTASH_REDIS_REST_URL = "Upstash Redis REST URL. Required on Netlify; serverless disks do not keep local files."
+  UPSTASH_REDIS_REST_TOKEN = "Upstash Redis REST token. Required on Netlify, paired with the URL."
+  CRON_SECRET = "Optional here. Required on Vercel. Letters and numbers, 16+ characters."

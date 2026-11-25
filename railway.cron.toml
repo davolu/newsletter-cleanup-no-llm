@@ -1,0 +1,13 @@
+# Cron service. Same repo, second Railway service.
+# Runs once an hour (more than 5 minutes apart) and the process exits.
+# `15 * * * *` is 15 minutes past every hour, UTC.
+# The script checks the in-app schedule and exits immediately when that
+# toggle is off, or when a daily schedule already ran inside the last 20 hours.
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npm run scheduled"
+cronSchedule = "15 * * * *"
+restartPolicyType = "NEVER"
