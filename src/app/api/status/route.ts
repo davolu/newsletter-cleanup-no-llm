@@ -1,7 +1,8 @@
 import { gmailConnectionStatus, createGmailSession } from "@/lib/gmail";
 import { fail, json } from "@/lib/http";
 import { logError } from "@/lib/redact";
-import { missingEnv, getStore, storageKind } from "@/lib/redis-store";
+import { getStore, missingEnv } from "@/lib/redis-store";
+import { selectStorage } from "@/lib/storage-selection";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,8 +11,8 @@ export async function GET() {
   const missing = missingEnv();
 
   try {
+    const storage = selectStorage();
     const store = getStore();
-    const storage = storageKind();
     const [settings, pending, lastResults, history, cursor, lastScheduledAt] = await Promise.all([
       store.getSettings(),
       store.getPending(),

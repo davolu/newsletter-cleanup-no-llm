@@ -1,6 +1,14 @@
 # Newsletter cleanup (no LLM)
 
-A small web app that helps you clear newsletter and promo mail out of a Gmail inbox. You press **Run now**. It finds likely bulk mail with ordinary Gmail signals, asks [Jev](https://docs.typesafe.ai/models) to pick one action, and then either leaves the message alone, archives it, or adds a label called `Unsubscribe?`.
+A small web app that clears newsletter and promo mail from Gmail. It never deletes a message.
+
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/davolu/newsletter-cleanup-no-llm)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdavolu%2Fnewsletter-cleanup-no-llm&project-name=newsletter-cleanup-no-llm&repository-name=newsletter-cleanup-no-llm&env=TYPESAFE_API_KEY,COMPOSIO_API_KEY,CRON_SECRET&envDescription=TypeSafe%20API%20key%20(add%20a%20prepaid%20balance%3B%20there%20are%20no%20free%20credits)%2C%20Composio%20API%20key%2C%20and%20a%20random%20CRON_SECRET%20of%20letters%20and%20numbers%2C%2016%2B%20characters%2C%20so%20the%20hourly%20route%20is%20not%20public.%20Upstash%20is%20provisioned%20by%20the%20button.&envLink=https%3A%2F%2Fgithub.com%2Fdavolu%2Fnewsletter-cleanup-no-llm%23environment-variables&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%5D)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/{TEMPLATE_CODE})
+
+Click a button to deploy your own copy, then paste your Composio and TypeSafe keys.
+
+You press **Run now**. The app finds likely bulk mail with ordinary Gmail signals, asks [Jev](https://docs.typesafe.ai/models) to pick one action, and then either leaves the message alone, archives it, or adds a label called `Unsubscribe?`.
 
 It never deletes a message and it never moves one to the trash.
 
@@ -33,14 +41,16 @@ Mail does leave the deployment: a sender, subject, and short snippet go to TypeS
 
 ## Beginner setup
 
-A hosted deploy needs three accounts. Running it on your own computer needs the Composio key and the TypeSafe key. None of the secret values belong in git. `.env.example` lists the names.
+You paste two keys. Storage is chosen for you. None of the secret values belong in git. `.env.example` lists the names.
 
 1. **Composio key.** Sign in at [composio.dev](https://composio.dev), open Platform, choose the project, then Settings → API Keys. Create a project API key. That value is `COMPOSIO_API_KEY`. Composio’s managed Google login is what connects Gmail, so you do not create a Google Cloud app for the usual case. If Google says the app is blocked, Composio’s managed Gmail app is not allowed for that account. Their [Gmail guide](https://docs.composio.dev/toolkits/gmail) explains using your own Google OAuth client instead.
 2. **TypeSafe key.** Create a key as described in the [TypeSafe quick start](https://docs.typesafe.ai/introduction/quickstart) and set `TYPESAFE_API_KEY`. TypeSafe does not include free credits. Open Settings → Billing in the TypeSafe console and add a small prepaid balance before the first run. A zero balance comes back as HTTP 402 and nothing gets classified. See [how Jev is priced](https://help.typesafe.ai/articles/5187202169-how-much-does-jev-cost).
-3. **Upstash Redis, for a hosted deploy.** Create a database on the [Upstash console](https://console.upstash.com/). Open the REST API section and copy `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. The free database is enough for one mailbox. Check [Upstash pricing](https://upstash.com/pricing) for the current free-tier cap rather than trusting an old number. Skip this step for `npm run dev`. When both variables are unset, the app writes `.data/state.json` on that machine instead.
-4. **Deploy** with one of the buttons below, and paste the keys when the host asks, including both Upstash values. On Vercel, also set `CRON_SECRET` to a random string of letters and numbers, at least 16 characters. Netlify, Vercel, and Railway do not keep a writable file between requests, so a hosted deploy still needs Upstash.
-5. Open the site, press **Connect Gmail**, and finish Google’s screen. Composio keeps the token.
-6. Leave **Suggest only** on for the first run. Press **Run now**. Read the list. Press **Apply selected** or **Apply all suggestions** when you agree.
+3. **Deploy** with a button at the top. Paste those two keys when the host asks. Storage is already wired:
+   - **Netlify** uses [Netlify Blobs](https://docs.netlify.com/build/data-and-storage/netlify-blobs/). The Netlify runtime is detected and no storage variable is asked for.
+   - **Vercel** provisions [Upstash for Redis](https://vercel.com/marketplace/upstash/upstash-kv) from the Deploy Button `stores` parameter ([docs](https://vercel.com/docs/deploy-button/source)). The integration writes `KV_REST_API_URL` and `KV_REST_API_TOKEN`. `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are accepted as the same REST API. Also paste `CRON_SECRET`, a random string of letters and numbers, at least 16 characters, so the hourly route is not public.
+   - **Railway** includes a Redis service named `Redis`. The web service and the cron service both read `REDIS_URL` (`${{Redis.REDIS_URL}}`). See [Railway Redis](https://docs.railway.com/databases/redis).
+4. Open the site, press **Connect Gmail**, and finish Google’s screen. Composio keeps the token.
+5. Leave **Suggest only** on for the first run. Press **Run now**. Read the list. Press **Apply selected** or **Apply all suggestions** when you agree.
 
 The form starts at a small batch (5), a cap of 15 messages a run, and a 20 second time budget. Those are defaults so a short free-tier function can finish and save its place. Change them in the form. They are not locked to a plan.
 
@@ -50,9 +60,7 @@ The same Next.js app runs on Netlify, Vercel, and Railway. Node.js 22.22.3 or ne
 
 ### Netlify
 
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/davolu/newsletter-cleanup-no-llm)
-
-`netlify.toml` has a `[template.environment]` block, so the deploy screen asks for `TYPESAFE_API_KEY`, `COMPOSIO_API_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, and `CRON_SECRET`. The scheduled function does not use `CRON_SECRET` (it calls the runner directly). Set it anyway if you also deploy the same repo to Vercel.
+The button at the top asks only for `TYPESAFE_API_KEY` and `COMPOSIO_API_KEY`. State is stored in Netlify Blobs, which the Netlify runtime configures. There is no storage key to paste.
 
 A scheduled function named `scheduled-cleanup` is set to `@hourly` (minute 0 of every hour, UTC). It runs on the published production deploy, not on deploy previews. Netlify scheduled functions stop after **30 seconds**. The default time budget is 20 seconds so this app can stop itself and save the cursor first. If you raise the budget above 30 seconds, Netlify can still kill the function, and a kill can happen before the cursor is saved. Keep the budget under 30 seconds on Netlify, or use Run now from the site (the site’s server function has its own, longer limit).
 
@@ -60,7 +68,7 @@ Hourly is the platform timer. If you pick **Daily** in the app, the hourly funct
 
 ### Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdavolu%2Fnewsletter-cleanup-no-llm&project-name=newsletter-cleanup-no-llm&repository-name=newsletter-cleanup-no-llm&env=TYPESAFE_API_KEY,COMPOSIO_API_KEY,UPSTASH_REDIS_REST_URL,UPSTASH_REDIS_REST_TOKEN,CRON_SECRET&envDescription=TypeSafe%20API%20key%20%28add%20a%20prepaid%20balance%3B%20there%20are%20no%20free%20credits%29%2C%20Composio%20API%20key%2C%20Upstash%20Redis%20REST%20URL%20and%20token%20%28required%20on%20this%20host%3B%20serverless%20disks%20do%20not%20keep%20files%29%2C%20and%20a%20random%20CRON_SECRET%20of%20letters%20and%20numbers%2C%2016%2B%20characters%2C%20so%20the%20hourly%20route%20is%20not%20public.&envLink=https%3A%2F%2Fgithub.com%2Fdavolu%2Fnewsletter-cleanup-no-llm%23environment-variables)
+The button at the top adds Upstash through the `stores` parameter documented at [vercel.com/docs/deploy-button/source](https://vercel.com/docs/deploy-button/source). The product is [Upstash for Redis](https://vercel.com/marketplace/upstash/upstash-kv) (`integrationSlug` `upstash`, `productSlug` `upstash-kv`). You paste the two API keys and `CRON_SECRET`. You do not paste a Redis URL.
 
 `vercel.json` uses the Vercel **Schedules** `schedules` key. It does not use the legacy `crons` key. The schedule is `0 * * * *` (hourly) with `"jitter": 15`, aimed at `POST /api/scheduled`.
 
@@ -70,16 +78,15 @@ Vercel sends `Authorization: Bearer <CRON_SECRET>` on that path. The route does 
 
 ### Railway
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/{TEMPLATE_CODE})
+The button at the top is a placeholder until David publishes the template and replaces `{TEMPLATE_CODE}`. That template includes a Redis service named `Redis`, plus the web service and the cron service. Both app services set `REDIS_URL` to `${{Redis.REDIS_URL}}` (see `railway.toml` and `railway.cron.toml`). The name is case-sensitive. You paste the two API keys on those services. You do not paste a Redis URL.
 
-David will publish the Railway template. Until `{TEMPLATE_CODE}` is replaced, that button is a placeholder and will not deploy this repo.
+When the template exists it should create three pieces:
 
-When the template exists it should create two services from this repo:
+- A Redis service named `Redis` ([Railway Redis](https://docs.railway.com/databases/redis)).
+- The web service uses `railway.toml`. It stays up and serves the site (`npm run start`) and reads `${{Redis.REDIS_URL}}`.
+- The cron service uses `railway.cron.toml`. Its start command is `npm run scheduled`, the cron is `15 * * * *` (15 minutes past every hour, more than 5 minutes apart), and the restart policy is `NEVER`. The process must exit. It reads the same `REDIS_URL`.
 
-- The web service uses `railway.toml`. It stays up and serves the site (`npm run start`).
-- The cron service uses `railway.cron.toml`. Its start command is `npm run scheduled`, the cron is `15 * * * *` (15 minutes past every hour, more than 5 minutes apart), and the restart policy is `NEVER`. The process must exit. It does.
-
-You can wire the same two services by hand: one service with start command `npm run start`, and a second service from the same repo with start command `npm run scheduled`, cron schedule `15 * * * *`, and no restart. The cron process checks the in-app schedule and exits immediately when that toggle is off.
+You can wire the same project by hand: add Redis, then two services from this repo. One uses start command `npm run start`. The other uses `npm run scheduled`, cron schedule `15 * * * *`, and no restart. Point `REDIS_URL` on both at `${{Redis.REDIS_URL}}`. The cron process checks the in-app schedule and exits immediately when that toggle is off.
 
 ## Environment variables
 
@@ -87,8 +94,9 @@ You can wire the same two services by hand: one service with start command `npm 
 | --- | --- | --- |
 | `TYPESAFE_API_KEY` | Yes | Jev classification. Prepaid balance required. |
 | `COMPOSIO_API_KEY` | Yes | Composio project key. Holds the Gmail connection. |
-| `UPSTASH_REDIS_REST_URL` | Hosted deploys | Upstash Redis REST URL. Leave unset, together with the token, for a local file. |
-| `UPSTASH_REDIS_REST_TOKEN` | Hosted deploys | Upstash Redis REST token. Set both Upstash variables, or neither. |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Written by Vercel | Upstash REST credentials from the Marketplace integration. |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Optional | Same REST API, if you already have an Upstash database. Set both, or neither. |
+| `REDIS_URL` | Written by Railway | TCP Redis URL shared by the web service and the cron service. |
 | `CRON_SECRET` | Yes on Vercel | Shared secret for `POST /api/scheduled`. Letters and numbers, 16 or more characters. |
 | `TYPESAFE_MODEL` | No | Defaults to `jev-latest`. |
 | `APP_ORIGIN` | No | Public site origin if the host does not send forwarded host headers. Used as the Gmail return URL. |
@@ -103,15 +111,18 @@ The same input count and the same output count are also priced at OpenAI’s pub
 
 Example arithmetic, not a forecast: 100,000 input tokens and 5,000 output tokens cost `100000 / 1000000 * 0.042` = **$0.0042** on Jev, because the output tokens are free. The same counts at the `gpt-4o-mini` rates are `100000 / 1000000 * 0.15` + `5000 / 1000000 * 0.60` = **$0.018**.
 
-TypeSafe bills this from the prepaid balance. Composio, Upstash, and the host each have their own plans. A host’s free tier can still stop a function early; that is what the time budget and the cursor are for.
+TypeSafe bills this from the prepaid balance. Composio and the host each have their own plans. The Vercel Upstash integration and Railway Redis have their own free or usage-based prices; check those products for the current numbers. A host’s free tier can still stop a function early; that is what the time budget and the cursor are for.
 
 ## Where state lives
 
-On your computer, when `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are both unset, state is a JSON file at `.data/state.json`. Git ignores that directory. The app chooses this by itself. You only need `TYPESAFE_API_KEY` and `COMPOSIO_API_KEY` in `.env.local`.
+The app picks one store when it starts:
 
-A hosted deploy still needs Upstash. Netlify Functions, Vercel Functions, and Railway cron run on disks that do not keep files from one request to the next, and the Railway web service does not share a disk with the cron service. Without Redis, the cursor, settings, and history would disappear. Upstash is reached over HTTPS with `@upstash/redis`, and the free tier is enough for one mailbox.
+1. **Netlify.** If `NETLIFY` is set, state goes to Netlify Blobs (`@netlify/blobs`). Netlify fills in the Blobs credentials for its functions. Nothing extra is pasted.
+2. **Vercel.** If `KV_REST_API_URL` and `KV_REST_API_TOKEN` are set, or `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`, state goes to Upstash over HTTPS (`@upstash/redis`). The Deploy Button’s `stores` parameter creates that database. A Vercel production or preview deploy without those variables stops, instead of writing a file that the host will throw away.
+3. **Railway.** If `REDIS_URL` is set, state goes to that Redis over TCP (`ioredis`). The template’s web service and cron service share it. A Railway deploy without `REDIS_URL` stops for the same reason.
+4. **Your computer.** With none of the above, state is `.data/state.json`. Git ignores that directory. `npm run dev` only needs the two API keys.
 
-Either store holds:
+Each store holds:
 
 - settings (batch size, caps, schedule, always-keep senders)
 - the Gmail page cursor
@@ -146,7 +157,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Put `TYPESAFE_API_KEY` and `COMPOSIO_API_KEY` in `.env.local`, which git ignores. Leave the Upstash lines empty. Settings and run history then stay in `.data/state.json`.
+Open [http://localhost:3000](http://localhost:3000). Put `TYPESAFE_API_KEY` and `COMPOSIO_API_KEY` in `.env.local`, which git ignores. Leave every storage line empty. Settings and run history then stay in `.data/state.json`.
 
 ```bash
 npm test

@@ -10,3 +10,9 @@ builder = "NIXPACKS"
 startCommand = "npm run start"
 healthcheckPath = "/"
 restartPolicyType = "ON_FAILURE"
+
+# The published template includes a Redis service named Redis.
+# https://docs.railway.com/databases/redis
+# The same reference is on the cron service, so both processes share one database.
+[variables]
+REDIS_URL = "${{Redis.REDIS_URL}}"
